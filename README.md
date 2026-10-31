@@ -15,10 +15,10 @@ React Native + TypeScript + Expo 기반 Android/iOS 화면 프로토타입입니
 
 ```powershell
 npm install
-npm start
+npm run start:node
 ```
 
-Expo 개발 서버가 시작되면 Expo Go에서 QR 코드를 스캔하거나 Android 에뮬레이터를 실행해 확인할 수 있습니다.
+`start:node`는 Node.js로 Expo 개발 서버를 직접 실행합니다. 서버가 시작되면 Expo Go에서 QR 코드를 스캔하거나 Android 에뮬레이터를 실행해 확인할 수 있습니다. 코드 편집 후에는 미리보기가 자동으로 갱신됩니다.
 
 ```powershell
 npm test
