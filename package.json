@@ -7,6 +7,8 @@
     "start:node": "node server.js",
     "dev": "node server.js",
     "web": "node server.js",
+    "build:pages": "node scripts/build-pages.js",
+    "extract-alarm": "node scripts/extract-alarm.js",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },
