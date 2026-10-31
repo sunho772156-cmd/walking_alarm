@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "걸어서 끄는 알람",
+    "name": "걸어서 깨우는 알람",
     "slug": "step-alarm",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": { "supportsTablet": true },
     "android": { "edgeToEdgeEnabled": true }
