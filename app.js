@@ -159,7 +159,7 @@
     const [hours, minutes] = timeInput.value.split(':').map(Number);
     const minuteOfDay = hours * 60 + minutes;
     const direction = event.deltaY < 0 ? 1 : -1;
-    const increment = event.shiftKey ? 60 : 1;
+    const increment = event.ctrlKey || event.metaKey ? 720 : event.shiftKey ? 60 : 1;
     const next = (minuteOfDay + direction * increment + 1440) % 1440;
     timeInput.value = `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`;
     timeInput.dispatchEvent(new Event('input', { bubbles: true }));
