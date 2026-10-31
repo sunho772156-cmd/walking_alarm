@@ -82,10 +82,8 @@
   function requestSensorPermissionsFromGesture() {
     const motionSupported = typeof window.DeviceMotionEvent !== 'undefined';
     const orientationSupported = typeof window.DeviceOrientationEvent !== 'undefined';
-    $('#motion-support').textContent = `가속도: ${motionSupported ? '지원' : '미지원'}`;
-    $('#gyro-support').textContent = `자이로 회전: ${motionSupported ? '권한 확인 중' : '미지원'}`;
-    $('#orientation-support').textContent = `방향: ${orientationSupported ? '지원' : '미지원'}`;
 
+    // Safari requires these calls to happen directly in the user's tap handler.
     let motionPermission;
     let orientationPermission;
     try {
@@ -98,6 +96,9 @@
         ? window.DeviceOrientationEvent.requestPermission()
         : Promise.resolve(orientationSupported ? 'granted' : 'unsupported');
     } catch (error) { orientationPermission = Promise.reject(error); }
+    $('#motion-support').textContent = `가속도: ${motionSupported ? '권한 확인 중' : '미지원'}`;
+    $('#gyro-support').textContent = `자이로 회전: ${motionSupported ? '권한 확인 중' : '미지원'}`;
+    $('#orientation-support').textContent = `방향: ${orientationSupported ? '권한 확인 중' : '미지원'}`;
     return Promise.allSettled([motionPermission, orientationPermission]).then(([motion, orientation]) => ({
       motion: motion.status === 'fulfilled' ? motion.value === 'granted' : false,
       orientation: orientation.status === 'fulfilled' ? orientation.value === 'granted' : false,
