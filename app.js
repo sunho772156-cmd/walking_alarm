@@ -31,7 +31,15 @@
   let availableSounds = [];
   let distanceVerifier = null;
   let sensorWatchdog = null;
-  const motionEstimator = { previousMagnitude: 0, filteredMagnitude: 0, lastStepAt: 0, lastUiAt: 0 };
+  const motionEstimator = {
+    baselineMagnitude: null,
+    previousHighPass: 0,
+    highPass: 0,
+    noiseFloor: 0,
+    lastSampleAt: 0,
+    lastStepAt: 0,
+    lastUiAt: 0,
+  };
 
   function selectTab(name) {
     state.tab = name;
@@ -95,17 +103,32 @@
   }
 
   function handleMotion(event) {
-    const acceleration = event.acceleration || event.accelerationIncludingGravity;
+    const isVector = (value) => value && value.x != null && value.y != null && value.z != null;
+    const acceleration = isVector(event.acceleration)
+      ? event.acceleration
+      : event.accelerationIncludingGravity;
     const rotation = event.rotationRate;
-    if (acceleration && acceleration.x != null && acceleration.y != null && acceleration.z != null) {
+    if (isVector(acceleration)) {
       const magnitude = Math.hypot(acceleration.x, acceleration.y, acceleration.z);
       state.sensorStats.acceleration = `${acceleration.x.toFixed(2)}, ${acceleration.y.toFixed(2)}, ${acceleration.z.toFixed(2)}`;
       state.sensorStats.accelerationReceived = true;
       $('#motion-support').textContent = '가속도: 데이터 수신';
-      const filtered = motionEstimator.filteredMagnitude * 0.8 + magnitude * 0.2;
-      const peak = magnitude - filtered;
       const now = Date.now();
-      if (motionEstimator.previousMagnitude > magnitude && peak > 1.15 && now - motionEstimator.lastStepAt > 350) {
+      const elapsed = motionEstimator.lastSampleAt
+        ? Math.min(0.25, Math.max(0.01, (now - motionEstimator.lastSampleAt) / 1000))
+        : 0.05;
+      if (motionEstimator.baselineMagnitude === null) motionEstimator.baselineMagnitude = magnitude;
+      const filterTimeConstant = event.acceleration ? 0.3 : 0.8;
+      const alpha = 1 - Math.exp(-elapsed / filterTimeConstant);
+      motionEstimator.baselineMagnitude += (magnitude - motionEstimator.baselineMagnitude) * alpha;
+      const highPass = magnitude - motionEstimator.baselineMagnitude;
+      motionEstimator.noiseFloor = motionEstimator.noiseFloor * 0.96 + Math.abs(highPass) * 0.04;
+      const peakThreshold = Math.max(0.3, Math.min(0.75, motionEstimator.noiseFloor * 1.25));
+      const isPeak = motionEstimator.highPass > motionEstimator.previousHighPass
+        && motionEstimator.highPass >= highPass
+        && motionEstimator.highPass >= peakThreshold;
+
+      if (isPeak && now - motionEstimator.lastStepAt >= 280) {
         motionEstimator.lastStepAt = now;
         state.sensorStats.steps += 1;
         state.sensorStats.estimatedDistance += 0.7;
@@ -115,8 +138,9 @@
           distanceVerifier?.addWalkingStep();
         }
       }
-      motionEstimator.previousMagnitude = magnitude;
-      motionEstimator.filteredMagnitude = filtered;
+      motionEstimator.previousHighPass = motionEstimator.highPass;
+      motionEstimator.highPass = highPass;
+      motionEstimator.lastSampleAt = now;
     }
     if (rotation && rotation.alpha != null && rotation.beta != null && rotation.gamma != null) {
       state.sensorStats.rotation = `${rotation.alpha.toFixed(1)}, ${rotation.beta.toFixed(1)}, ${rotation.gamma.toFixed(1)}`;
@@ -186,8 +210,12 @@
       }
 
       state.sensorActive = true;
-      motionEstimator.previousMagnitude = 0;
-      motionEstimator.filteredMagnitude = 0;
+      motionEstimator.baselineMagnitude = null;
+      motionEstimator.previousHighPass = 0;
+      motionEstimator.highPass = 0;
+      motionEstimator.noiseFloor = 0;
+      motionEstimator.lastSampleAt = 0;
+      motionEstimator.lastStepAt = 0;
       state.sensorStats.accelerationReceived = false;
       state.sensorStats.rotationReceived = false;
       state.sensorStats.orientationReceived = false;

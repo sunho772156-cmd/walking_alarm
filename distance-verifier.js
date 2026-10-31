@@ -41,24 +41,26 @@
       const elapsedSeconds = (current.timestamp - previous.timestamp) / 1000;
       const rawDistance = distanceBetween(previous, current);
       const stepSupport = stepsSincePreviousFix;
-      const previousAccuracy = previous.accuracy;
-      previous = current;
-      stepsSincePreviousFix = 0;
 
       if (elapsedSeconds <= 0 || elapsedSeconds > 30 || rawDistance / elapsedSeconds > MAX_WALKING_SPEED_MPS) {
+        previous = current;
+        stepsSincePreviousFix = 0;
         publish('위치 변화가 보행 속도 범위를 벗어나 제외했습니다.', current.accuracy);
         return;
       }
 
-      const uncertainty = (current.accuracy + previousAccuracy) / 2;
+      // Keep the anchor and walking evidence until short indoor GPS segments add up.
+      const uncertainty = Math.min(2, (current.accuracy + previous.accuracy) * 0.25);
       const conservativeDistance = Math.max(0, rawDistance - uncertainty);
       const requiredSteps = Math.max(1, Math.ceil(conservativeDistance / 1.5));
       if (conservativeDistance < 0.5 || stepSupport < requiredSteps) {
-        publish(stepSupport ? '걸음 신호와 위치 이동이 일치하지 않아 제외했습니다.' : '걸음 신호를 기다리는 중 · 이동을 검증하지 않았습니다.', current.accuracy);
+        publish('걸음 신호와 위치 이동을 더 확인하고 있습니다. 아직 검증 거리에 포함하지 않았습니다.', current.accuracy);
         return;
       }
 
       verifiedDistance += conservativeDistance;
+      previous = current;
+      stepsSincePreviousFix = 0;
       publish(`걸음 신호와 정확한 위치 이동 확인 · ±${Math.round(current.accuracy)}m`, current.accuracy);
     }
 
