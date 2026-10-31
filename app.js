@@ -6,6 +6,8 @@
     testMode: true,
     target: 10,
     session: null,
+    scheduled: null,
+    scheduleTimer: null,
     signedInAs: '',
     group: null,
   };
@@ -13,9 +15,17 @@
   const timeInput = $('#alarm-time');
   const timeControl = $('#time-control');
   const targetInput = $('#target-distance');
+  const soundInput = $('#alarm-sound');
   const testToggle = $('#test-mode');
+  const scheduleButton = $('#schedule-alarm');
   const timeLabel = () => timeInput.value || '07:00';
   const formatDistance = (number) => Number(number).toFixed(1);
+  const audioContextType = window.AudioContext || window.webkitAudioContext;
+  let audioContext = null;
+  let alarmBufferPromise = null;
+  let alarmSource = null;
+  let synthTimer = null;
+  let activeNotification = null;
 
   function selectTab(name) {
     state.tab = name;
@@ -40,6 +50,168 @@
     const percent = ((state.target - 7) / (50 - 7)) * 100;
     targetInput.style.setProperty('--range-progress', `${percent}%`);
     if (!state.session || state.session.status === 'completed') renderAlarm();
+  }
+
+  function prepareAlarmAudio() {
+    if (!audioContextType) return Promise.reject(new Error('Web Audio is unavailable'));
+    if (!audioContext) audioContext = new audioContextType();
+    const resumed = audioContext.resume();
+    if (!alarmBufferPromise) {
+      alarmBufferPromise = fetch('/assets/alarm_cc0.wav')
+        .then((response) => {
+          if (!response.ok) throw new Error('Alarm sound could not be loaded');
+          return response.arrayBuffer();
+        })
+        .then((buffer) => audioContext.decodeAudioData(buffer));
+    }
+    return Promise.all([resumed, alarmBufferPromise]).then(([, buffer]) => buffer);
+  }
+
+  function playTone(frequency, duration, waveform = 'sine') {
+    if (!audioContext) return;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const now = audioContext.currentTime;
+    oscillator.type = waveform;
+    oscillator.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  }
+
+  function playSynthPattern(sound) {
+    if (sound === 'bell') {
+      playTone(784, 0.45, 'sine');
+      window.setTimeout(() => playTone(988, 0.48, 'sine'), 230);
+    } else {
+      playTone(880, 0.22, 'square');
+      window.setTimeout(() => playTone(660, 0.22, 'square'), 270);
+    }
+  }
+
+  function stopAlarmSound() {
+    if (synthTimer) window.clearInterval(synthTimer);
+    synthTimer = null;
+    if (alarmSource) {
+      try { alarmSource.stop(); } catch { /* already stopped */ }
+      alarmSource.disconnect();
+      alarmSource = null;
+    }
+    if (activeNotification) activeNotification.close();
+    activeNotification = null;
+  }
+
+  async function startAlarmSound(sound, preview = false) {
+    stopAlarmSound();
+    if (sound === 'silent') return;
+    if (!audioContext && audioContextType) audioContext = new audioContextType();
+    if (!audioContext) throw new Error('Web Audio is unavailable');
+    await audioContext.resume();
+
+    if (sound === 'cc0') {
+      const buffer = await prepareAlarmAudio();
+      alarmSource = audioContext.createBufferSource();
+      alarmSource.buffer = buffer;
+      alarmSource.loop = !preview;
+      alarmSource.connect(audioContext.destination);
+      alarmSource.onended = () => { if (preview) alarmSource = null; };
+      alarmSource.start();
+      return;
+    }
+
+    playSynthPattern(sound);
+    if (!preview) synthTimer = window.setInterval(() => playSynthPattern(sound), sound === 'bell' ? 1800 : 1100);
+  }
+
+  function renderSchedule() {
+    const scheduled = state.scheduled;
+    if (!scheduled) {
+      $('#schedule-status').textContent = '예약된 알람이 없습니다.';
+      $('#schedule-status').classList.remove('schedule-armed');
+      scheduleButton.innerHTML = '알람 예약하기 <span>→</span>';
+      return;
+    }
+    const dateLabel = new Date(scheduled.scheduledAt).toLocaleString('ko-KR', {
+      month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
+    });
+    $('#schedule-status').textContent = `${dateLabel} · 목표 ${scheduled.targetDistance}m · 1회 예약됨`;
+    $('#schedule-status').classList.add('schedule-armed');
+    scheduleButton.textContent = '예약 취소';
+  }
+
+  function armScheduledAlarm() {
+    if (state.scheduleTimer) window.clearTimeout(state.scheduleTimer);
+    state.scheduleTimer = null;
+    if (!state.scheduled) return;
+    const delay = state.scheduled.scheduledAt - Date.now();
+    if (delay <= 0) return fireScheduledAlarm();
+    state.scheduleTimer = window.setTimeout(armScheduledAlarm, Math.min(delay, 2147480000));
+  }
+
+  function fireScheduledAlarm() {
+    const scheduled = state.scheduled;
+    if (!scheduled) return;
+    state.scheduled = null;
+    window.localStorage.removeItem('move-to-wake-schedule');
+    renderSchedule();
+    state.target = scheduled.targetDistance;
+    targetInput.value = String(state.target);
+    testToggle.checked = scheduled.mode === 'simulation';
+    state.testMode = testToggle.checked;
+    state.session = {
+      mode: scheduled.mode,
+      status: 'ringing',
+      targetDistance: scheduled.targetDistance,
+      estimatedWalkingDistance: 0,
+      verifiedDistance: 0,
+      estimatedSteps: 0,
+      startedAt: Date.now(),
+    };
+    renderAlarm();
+    selectTab('alarm');
+    startAlarmSound(scheduled.sound).catch(() => {
+      $('#verification-note').querySelector('small').textContent = '브라우저가 소리 재생을 차단했어요. 화면을 눌러 다시 확인해 주세요.';
+    });
+    if ('Notification' in window && Notification.permission === 'granted') {
+      activeNotification = new Notification('알람이 울리고 있어요', {
+        body: `${scheduled.targetDistance}m를 이동하면 알람이 해제됩니다.`,
+      });
+      activeNotification.onclick = () => window.focus();
+    }
+  }
+
+  async function scheduleAlarm() {
+    if (state.scheduled) {
+      window.clearTimeout(state.scheduleTimer);
+      state.scheduleTimer = null;
+      state.scheduled = null;
+      window.localStorage.removeItem('move-to-wake-schedule');
+      renderSchedule();
+      return;
+    }
+
+    const [hours, minutes] = timeLabel().split(':').map(Number);
+    const scheduledAt = new Date();
+    scheduledAt.setHours(hours, minutes, 0, 0);
+    if (scheduledAt.getTime() <= Date.now()) scheduledAt.setDate(scheduledAt.getDate() + 1);
+    state.scheduled = {
+      scheduledAt: scheduledAt.getTime(),
+      targetDistance: Number(targetInput.value),
+      time: timeLabel(),
+      sound: soundInput.value,
+      mode: testToggle.checked ? 'simulation' : 'sensor',
+    };
+    window.localStorage.setItem('move-to-wake-schedule', JSON.stringify(state.scheduled));
+    renderSchedule();
+    armScheduledAlarm();
+    if (state.scheduled.sound !== 'silent') prepareAlarmAudio().catch(() => {});
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
   }
 
   function renderAlarm() {
@@ -69,7 +241,10 @@
     $('#simulator').classList.toggle('hidden', session?.mode !== 'simulation' || done);
 
     const note = $('#verification-note');
-    if (session?.mode === 'sensor') {
+    if (!session) {
+      note.innerHTML = '<i></i><span><b>알람 대기</b><small>설정한 시각에 예약된 알람이 시작되면 진행 상태를 보여줍니다.</small></span>';
+      note.classList.remove('sensor-note');
+    } else if (session.mode === 'sensor') {
       note.innerHTML = '<i></i><span><b>위치 검증 불가</b><small>센서가 연결되지 않아 이동을 검증 거리로 추가하지 않습니다.</small></span>';
       note.classList.add('sensor-note');
     } else {
@@ -89,7 +264,11 @@
     }
     if (session.verifiedDistance >= session.targetDistance) session.status = 'completed';
     renderAlarm();
-    if (session.status === 'completed') testToggle.disabled = false;
+    if (session.status === 'completed') {
+      stopAlarmSound();
+      testToggle.disabled = false;
+      renderSchedule();
+    }
   }
 
   function signIn(provider) {
@@ -138,6 +317,14 @@
   $$('.tab').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.tab)));
   targetInput.addEventListener('input', updateTarget);
   timeInput.addEventListener('input', renderAlarm);
+  soundInput.addEventListener('change', () => window.localStorage.setItem('move-to-wake-sound', soundInput.value));
+  $('#preview-sound').addEventListener('click', () => {
+    $('#sound-feedback').textContent = '';
+    startAlarmSound(soundInput.value, true).catch(() => {
+      $('#sound-feedback').textContent = '소리를 재생할 수 없습니다. 다시 눌러 시도해 주세요.';
+    });
+  });
+  scheduleButton.addEventListener('click', scheduleAlarm);
   timeControl.addEventListener('wheel', (event) => {
     event.preventDefault();
     const [hours, minutes] = timeInput.value.split(':').map(Number);
@@ -158,8 +345,37 @@
   $('#create-group').addEventListener('click', createGroup);
   $('#group-name').addEventListener('keydown', (event) => { if (event.key === 'Enter') createGroup(); });
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.scheduled && Date.now() >= state.scheduled.scheduledAt) {
+      fireScheduledAlarm();
+    }
+  });
+
   const initialTab = location.hash.slice(1);
   selectTab(['setup', 'alarm', 'community'].includes(initialTab) ? initialTab : 'setup');
+  const savedSound = window.localStorage.getItem('move-to-wake-sound');
+  if (savedSound && [...soundInput.options].some((option) => option.value === savedSound)) soundInput.value = savedSound;
   updateTarget();
   updateMode();
+  renderSchedule();
+  try {
+    const saved = JSON.parse(window.localStorage.getItem('move-to-wake-schedule') || 'null');
+    if (saved && saved.scheduledAt > Date.now()) {
+      state.scheduled = saved;
+      timeInput.value = saved.time;
+      targetInput.value = String(saved.targetDistance);
+      state.target = saved.targetDistance;
+      soundInput.value = saved.sound;
+      testToggle.checked = saved.mode === 'simulation';
+      updateMode();
+      updateTarget();
+      renderSchedule();
+      armScheduledAlarm();
+    } else if (saved) {
+      window.localStorage.removeItem('move-to-wake-schedule');
+      $('#schedule-status').textContent = '지난 예약이 만료됐습니다. 다시 예약해 주세요.';
+    }
+  } catch {
+    window.localStorage.removeItem('move-to-wake-schedule');
+  }
 })();

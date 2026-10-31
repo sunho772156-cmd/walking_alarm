@@ -10,6 +10,7 @@ const contentTypes = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
+  '.wav': 'audio/wav',
 };
 
 const server = http.createServer((request, response) => {

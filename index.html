@@ -51,17 +51,34 @@
               <p class="hint">최소 7m · 1m 단위로 조절 · 왕복 경로도 누적돼요</p>
             </article>
 
+            <article class="card sound-card">
+              <div class="card-heading"><div><p class="overline">ALARM SOUND</p><h2>알람음</h2></div><span class="small-chip">SOUND</span></div>
+              <div class="sound-controls">
+                <select id="alarm-sound" class="text-input sound-select" aria-label="알람음 선택">
+                  <option value="cc0">Classic Alarm · CC0 공개 음원</option>
+                  <option value="pulse">Digital Pulse · 전자음</option>
+                  <option value="bell">Soft Bell · 부드러운 벨</option>
+                  <option value="silent">무음</option>
+                </select>
+                <button id="preview-sound" class="button button-outline sound-preview" type="button">▶ 미리 듣기</button>
+              </div>
+              <p class="hint">Classic Alarm: <a href="https://opengameart.org/content/alarm-sound-effect" target="_blank" rel="noreferrer">bonzille · OpenGameArt · CC0 1.0</a></p>
+              <p id="sound-feedback" class="fine-print" aria-live="polite"></p>
+            </article>
+
             <article class="card explainer-card">
               <div class="explainer-icon">i</div><div><h3>실제 이동 확인이 우선이에요</h3><p>걸음 수나 흔들림만으로 판단하지 않아요. 직접 걸어야 이동 거리가 늘어나요. 검증되지 않는 이동은 인정되지 않아요.</p></div>
             </article>
+            <button id="schedule-alarm" class="button button-primary setup-cta">알람 예약하기 <span>→</span></button>
           </div>
-          <p class="page-footnote">현재는 알람 예약 기능이 연결되지 않았습니다.</p>
+          <p id="schedule-status" class="page-footnote" aria-live="polite">예약된 알람이 없습니다.</p>
+          <p class="page-footnote limitation-note">예약 시각에 이 웹사이트가 열려 있어야 알람이 울립니다. 브라우저를 닫거나 기기가 절전 상태면 울리지 않을 수 있어요.</p>
         </section>
 
         <section class="page" id="page-alarm">
           <div class="page-heading">
             <div><p class="eyebrow">02 / WAKE UP</p><h1 id="alarm-heading">걸어서 하루를 시작해요<span class="green">.</span></h1><p class="subheading">설정한 거리를 누적 이동하면 알람이 해제돼요.</p></div>
-            <span id="ring-status" class="ring-status"><i></i> 미리보기</span>
+            <span id="ring-status" class="ring-status"><i></i> 알람 대기</span>
           </div>
           <div class="alarm-layout">
             <article class="card progress-card">
@@ -86,7 +103,7 @@
               </div>
             </article>
           </div>
-          <p class="page-footnote">실제 위치 검증과 알람 예약은 아직 연결되지 않았습니다. 센서 기반 부정 동작 감지는 완벽하지 않습니다.</p>
+          <p class="page-footnote">실제 위치 검증 센서는 아직 연결되지 않았습니다. 센서 기반 부정 동작 감지는 완벽하지 않습니다.</p>
         </section>
 
         <section class="page" id="page-community">
@@ -120,7 +137,7 @@
           </div>
         </section>
       </main>
-      <footer><span>MOVE TO WAKE <b>·</b> UI PROTOTYPE</span><span>실제 측정과 알람 예약 기능은 미구현</span></footer>
+      <footer><span>MOVE TO WAKE <b>·</b> WEB PROTOTYPE</span><span>실제 위치 검증 센서는 미구현</span></footer>
     </div>
   </body>
 </html>
