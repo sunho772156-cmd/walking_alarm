@@ -1,0 +1,52 @@
+{
+  "sounds": [
+    {
+      "name": "Alarm sound 1",
+      "sourceFile": "14132bed-0af4-4ec1-841e-528e8ba98d85.mp4",
+      "file": "01_14132bed-0af4-4ec1-841e-528e8ba98d85.mp3",
+      "src": "/assets/alarm_sounds/01_14132bed-0af4-4ec1-841e-528e8ba98d85.mp3"
+    },
+    {
+      "name": "Alarm sound 2",
+      "sourceFile": "4cb96cbd-a81d-4bf0-840e-444017b95244.mp4",
+      "file": "02_4cb96cbd-a81d-4bf0-840e-444017b95244.mp3",
+      "src": "/assets/alarm_sounds/02_4cb96cbd-a81d-4bf0-840e-444017b95244.mp3"
+    },
+    {
+      "name": "Alarm sound 3",
+      "sourceFile": "60c64909-1341-481e-8c1d-195b2e000961.mp4",
+      "file": "03_60c64909-1341-481e-8c1d-195b2e000961.mp3",
+      "src": "/assets/alarm_sounds/03_60c64909-1341-481e-8c1d-195b2e000961.mp3"
+    },
+    {
+      "name": "Alarm sound 4",
+      "sourceFile": "74f7301a-77a9-4762-b4a3-e543bb8f8a3f.mp4",
+      "file": "04_74f7301a-77a9-4762-b4a3-e543bb8f8a3f.mp3",
+      "src": "/assets/alarm_sounds/04_74f7301a-77a9-4762-b4a3-e543bb8f8a3f.mp3"
+    },
+    {
+      "name": "Alarm sound 5",
+      "sourceFile": "b3dad51e-c375-4207-bf36-232a6ceba9e0.mp4",
+      "file": "05_b3dad51e-c375-4207-bf36-232a6ceba9e0.mp3",
+      "src": "/assets/alarm_sounds/05_b3dad51e-c375-4207-bf36-232a6ceba9e0.mp3"
+    },
+    {
+      "name": "Alarm sound 6",
+      "sourceFile": "da28ed19-90df-4053-a8c0-510e9a3c8cd9.mp4",
+      "file": "06_da28ed19-90df-4053-a8c0-510e9a3c8cd9.mp3",
+      "src": "/assets/alarm_sounds/06_da28ed19-90df-4053-a8c0-510e9a3c8cd9.mp3"
+    },
+    {
+      "name": "Alarm sound 7",
+      "sourceFile": "e0f99891-6bc7-4fb6-b4f9-d40eb383e537.mp4",
+      "file": "07_e0f99891-6bc7-4fb6-b4f9-d40eb383e537.mp3",
+      "src": "/assets/alarm_sounds/07_e0f99891-6bc7-4fb6-b4f9-d40eb383e537.mp3"
+    },
+    {
+      "name": "yarusong (1)",
+      "sourceFile": "yarusong (1).mp4",
+      "file": "08_yarusong_1.mp3",
+      "src": "/assets/alarm_sounds/08_yarusong_1.mp3"
+    }
+  ]
+}
