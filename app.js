@@ -42,21 +42,6 @@
     if (!state.session || state.session.status === 'completed') renderAlarm();
   }
 
-  function startPreview() {
-    state.session = {
-      mode: state.testMode ? 'simulation' : 'sensor',
-      status: 'ringing',
-      targetDistance: Number(targetInput.value),
-      estimatedWalkingDistance: 0,
-      verifiedDistance: 0,
-      estimatedSteps: 0,
-      startedAt: Date.now(),
-    };
-    testToggle.disabled = true;
-    renderAlarm();
-    selectTab('alarm');
-  }
-
   function renderAlarm() {
     const session = state.session;
     const verified = session?.verifiedDistance ?? 0;
@@ -79,8 +64,8 @@
     const done = session?.status === 'completed';
     const status = $('#ring-status');
     status.classList.toggle('done', done);
-    status.innerHTML = `<i></i> ${done ? '목표 달성' : '미리보기'}`;
-    $('#alarm-heading').innerHTML = done ? '목표를 달성했어요<span class="green">.</span>' : '걸어서 하루를 시작해요<span class="green">.</span>';
+    status.innerHTML = `<i></i> ${done ? '목표 달성' : session ? '알람 진행 중' : '알람 대기'}`;
+    $('#alarm-heading').innerHTML = done ? '목표를 달성했어요<span class="green">.</span>' : session ? '걸어서 하루를 시작해요<span class="green">.</span>' : '설정한 알람이 여기에 표시돼요<span class="green">.</span>';
     $('#simulator').classList.toggle('hidden', session?.mode !== 'simulation' || done);
 
     const note = $('#verification-note');
@@ -151,7 +136,6 @@
   }
 
   $$('.tab').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.tab)));
-  $('#preview-alarm').addEventListener('click', startPreview);
   targetInput.addEventListener('input', updateTarget);
   timeInput.addEventListener('input', renderAlarm);
   timeControl.addEventListener('wheel', (event) => {
