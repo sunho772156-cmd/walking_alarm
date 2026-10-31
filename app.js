@@ -11,6 +11,7 @@
   };
 
   const timeInput = $('#alarm-time');
+  const timeControl = $('#time-control');
   const targetInput = $('#target-distance');
   const testToggle = $('#test-mode');
   const timeLabel = () => timeInput.value || '07:00';
@@ -153,6 +154,16 @@
   $('#preview-alarm').addEventListener('click', startPreview);
   targetInput.addEventListener('input', updateTarget);
   timeInput.addEventListener('input', renderAlarm);
+  timeControl.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const [hours, minutes] = timeInput.value.split(':').map(Number);
+    const minuteOfDay = hours * 60 + minutes;
+    const direction = event.deltaY < 0 ? 1 : -1;
+    const increment = event.shiftKey ? 60 : 1;
+    const next = (minuteOfDay + direction * increment + 1440) % 1440;
+    timeInput.value = `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`;
+    timeInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }, { passive: false });
   testToggle.addEventListener('change', updateMode);
   $$('.demo-button').forEach((button) => button.addEventListener('click', () => {
     addMovement(Number(button.dataset.estimated), Number(button.dataset.distance), Number(button.dataset.steps));
