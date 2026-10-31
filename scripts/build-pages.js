@@ -4,8 +4,10 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 fs.mkdirSync(output, { recursive: true });
+const obsoleteVerifier = path.join(output, 'distance-verifier.js');
+if (fs.existsSync(obsoleteVerifier)) fs.unlinkSync(obsoleteVerifier);
 
-for (const file of ['index.html', 'style.css', 'app.js', 'distance-verifier.js']) {
+for (const file of ['index.html', 'style.css', 'app.js', 'speed-distance-tracker.js']) {
   fs.copyFileSync(path.join(root, file), path.join(output, file));
 }
 

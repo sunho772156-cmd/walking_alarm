@@ -7,7 +7,7 @@
     <meta name="description" content="목표한 거리를 걸어야 알람이 해제되는 Move to Wake" />
     <title>Move to Wake — 걸어서 깨우는 알람</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="distance-verifier.js" defer></script>
+    <script src="speed-distance-tracker.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -40,7 +40,7 @@
               <div><span>가속도 (m/s²)</span><b id="sensor-acceleration">—</b></div>
               <div><span>회전 속도 (°/s)</span><b id="sensor-rotation">—</b></div>
               <div><span>방향 (°)</span><b id="sensor-orientation">—</b></div>
-              <div><span>검증된 이동 거리</span><b id="sensor-verified">0.0 m</b></div>
+              <div><span>속도 기반 누적 거리</span><b id="sensor-speed-distance">0.0 m</b></div>
             </div>
             <p id="sensor-status" class="fine-print" aria-live="polite">센서 사용 전입니다.</p>
             <p id="sensor-help" class="sensor-help hidden">Safari: 설정 → Safari → 동작 및 방향 접근 허용을 확인하세요. Android: 브라우저 사이트 설정에서 모션 센서 권한을 확인하세요. HTTPS 연결과 기기 설정도 확인한 뒤 다시 시도할 수 있습니다.</p>
@@ -95,17 +95,17 @@
           <div class="alarm-layout">
             <article class="card progress-card">
               <div class="progress-top"><div><p class="overline">DISTANCE PROGRESS</p><h2>오늘의 이동 목표</h2></div><time id="ring-time">07:00</time></div>
-              <div class="progress-numbers"><strong id="verified-value">0.0</strong><span>/ <b id="goal-value">10</b> m</span></div>
+              <div class="progress-numbers"><strong id="speed-distance-value">0.0</strong><span>/ <b id="goal-value">10</b> m</span></div>
               <div class="progress-track"><div id="progress-fill"></div><i id="progress-dot"></i></div>
               <div class="progress-caption"><span>출발</span><span id="remaining-value">10.0m 남음</span><span>목표</span></div>
               <div class="metrics">
-                <div><span>누적 경로</span><b id="route-value" class="green">0.0 m</b></div>
+                <div><span>속도 누적 거리</span><b id="speed-route-value" class="green">0.0 m</b></div>
               </div>
               <div class="sensor-readout"><span>가속도 (m/s²)</span><b id="acceleration-readout">—</b><small id="tracking-status" aria-live="polite">알람이 울리면 센서 상태를 확인합니다.</small></div>
-              <div id="verification-note" class="verification-note"><i></i><span><b>걸음 신호와 위치를 함께 확인합니다</b><small>가속도 기반 걸음 추정과 정확한 위치 이동이 함께 확인될 때만 보수적으로 계산한 거리를 인정합니다. 실내에서 위치 정확도가 낮으면 거리가 늘지 않을 수 있습니다.</small></span></div>
+              <div id="verification-note" class="verification-note"><i></i><span><b>실시간 속도로 이동 거리를 계산합니다</b><small>브라우저가 제공하는 속도(m/s)를 시간에 따라 누적합니다. 좌표와 정확도는 앱에서 읽거나 저장하지 않습니다. 속도 정보는 실내에서 제공되지 않을 수 있으며 실제 이동을 완벽히 검증하지는 못합니다.</small></span></div>
             </article>
           </div>
-          <p class="page-footnote">가속도 추정만으로는 검증 거리가 늘지 않습니다. 걸음 신호와 고정밀 위치 이동을 함께 확인합니다. 실내 위치 측위가 부정확하거나 브라우저·운영체제가 백그라운드 센서를 중단하면 추적되지 않을 수 있습니다. HTTPS와 센서·위치 권한이 필요합니다.</p>
+          <p class="page-footnote">거리 누적에는 브라우저의 실시간 속도 샘플이 필요합니다. 속도는 위치 서비스에서 제공되므로 HTTPS와 브라우저 위치 권한이 필요하지만, 앱은 좌표를 거리 계산이나 저장에 사용하지 않습니다. 실내에서 속도 샘플이 제공되지 않으면 누적되지 않을 수 있습니다.</p>
         </section>
 
         <section class="page" id="page-community">
@@ -139,7 +139,7 @@
           </div>
         </section>
       </main>
-      <footer><span>MOVE TO WAKE <b>·</b> WEB PROTOTYPE</span><span>가속도·위치 교차 확인</span></footer>
+      <footer><span>MOVE TO WAKE <b>·</b> WEB PROTOTYPE</span><span>실시간 속도 기반 거리</span></footer>
     </div>
   </body>
 </html>

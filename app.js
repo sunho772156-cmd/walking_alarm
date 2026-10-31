@@ -29,7 +29,7 @@
   let activeNotification = null;
   let alarmAudio = null;
   let availableSounds = [];
-  let distanceVerifier = null;
+  let speedDistanceTracker = null;
   let sensorWatchdog = null;
   const motionEstimator = {
     baselineMagnitude: null,
@@ -58,7 +58,7 @@
     $('#sensor-acceleration').textContent = state.sensorStats.acceleration;
     $('#sensor-rotation').textContent = state.sensorStats.rotation;
     $('#sensor-orientation').textContent = state.sensorStats.orientation;
-    $('#sensor-verified').textContent = `${formatDistance(state.session?.verifiedDistance ?? 0)} m`;
+    $('#sensor-speed-distance').textContent = `${formatDistance(state.session?.speedDistance ?? 0)} m`;
   }
 
   function detectSensorSupport() {
@@ -159,7 +159,6 @@
           if (state.session?.status === 'ringing') {
             state.session.estimatedSteps += 1;
             state.session.estimatedWalkingDistance += 0.7;
-            distanceVerifier?.addWalkingStep();
           }
         }
 
@@ -196,23 +195,23 @@
     $('#sensor-status').textContent = '방향 데이터 수신 중 · 각도만으로 이동을 판단하지 않습니다.';
   }
 
-  function startDistanceVerification() {
-    distanceVerifier?.stop();
+  function startSpeedTracking() {
+    speedDistanceTracker?.stop();
     if (!state.sensorActive || !state.session || state.session.status !== 'ringing') return;
-    distanceVerifier = window.DistanceVerifier.create(({ verifiedDistance, status }) => {
+    speedDistanceTracker = window.SpeedDistanceTracker.create(({ distance, status }) => {
       if (!state.session || state.session.status !== 'ringing') return;
-      state.session.verifiedDistance = verifiedDistance;
+      state.session.speedDistance = distance;
       $('#tracking-status').textContent = status;
       updateSensorPanel();
       renderAlarm();
-      if (verifiedDistance >= state.session.targetDistance) {
+      if (distance >= state.session.targetDistance) {
         state.session.status = 'completed';
         stopAlarmSound();
         stopSensors();
         renderAlarm();
       }
-    }, state.session.verifiedDistance);
-    distanceVerifier.start();
+    }, state.session.speedDistance);
+    speedDistanceTracker.start();
   }
 
   function startSensors() {
@@ -265,10 +264,7 @@
       updateSensorPanel();
       if (motionOkay) window.addEventListener('devicemotion', handleMotion, { passive: true });
       if (orientationOkay) window.addEventListener('deviceorientation', handleOrientation, { passive: true });
-      if (window.isSecureContext && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(() => {}, () => {}, { enableHighAccuracy: true, timeout: 10000 });
-      }
-      if (state.session?.status === 'ringing') startDistanceVerification();
+      if (state.session?.status === 'ringing') startSpeedTracking();
       $('#sensor-state-chip').textContent = '센서 사용 중';
       $('#sensor-status').textContent = '센서 이벤트를 기다리는 중…';
       $('#sensor-help').classList.toggle('hidden', motionOkay && orientationOkay);
@@ -300,8 +296,8 @@
     window.removeEventListener('devicemotion', handleMotion);
     window.removeEventListener('deviceorientation', handleOrientation);
     window.clearTimeout(sensorWatchdog);
-    distanceVerifier?.stop();
-    distanceVerifier = null;
+    speedDistanceTracker?.stop();
+    speedDistanceTracker = null;
     state.sensorActive = false;
     $('#sensor-start').textContent = '센서 사용 시작';
     if (updateUi) {
@@ -508,13 +504,13 @@
       status: 'ringing',
       targetDistance: scheduled.targetDistance,
       estimatedWalkingDistance: 0,
-      verifiedDistance: 0,
+      speedDistance: 0,
       estimatedSteps: 0,
       startedAt: Date.now(),
     };
     renderAlarm();
     selectTab('alarm');
-    if (state.sensorActive) startDistanceVerification();
+    if (state.sensorActive) startSpeedTracking();
     else $('#tracking-status').textContent = '알람이 시작됐습니다. 설정 탭에서 센서 사용 시작을 눌러 추적을 켜세요.';
     if (scheduled.sound && scheduled.sound !== 'silent') {
       startAlarmSound(scheduled.sound).catch(() => {
@@ -573,16 +569,16 @@
 
   function renderAlarm() {
     const session = state.session;
-    const verified = session?.verifiedDistance ?? 0;
+    const distance = session?.speedDistance ?? 0;
     const goal = session?.targetDistance ?? Number(targetInput.value);
-    const progress = Math.min(verified / goal, 1);
-    const remaining = Math.max(0, goal - verified);
+    const progress = Math.min(distance / goal, 1);
+    const remaining = Math.max(0, goal - distance);
 
     $('#ring-time').textContent = timeLabel();
-    $('#verified-value').textContent = formatDistance(verified);
+    $('#speed-distance-value').textContent = formatDistance(distance);
     $('#goal-value').textContent = goal;
     $('#remaining-value').textContent = `${formatDistance(remaining)}m 남음`;
-    $('#route-value').textContent = `${formatDistance(verified)} m`;
+    $('#speed-route-value').textContent = `${formatDistance(distance)} m`;
     $('#progress-fill').style.width = `${progress * 100}%`;
     $('#progress-dot').style.left = `${progress * 100}%`;
 
@@ -593,7 +589,7 @@
     $('#alarm-heading').innerHTML = done ? '목표를 달성했어요<span class="green">.</span>' : session ? '걸어서 하루를 시작해요<span class="green">.</span>' : '설정한 알람이 여기에 표시돼요<span class="green">.</span>';
     const note = $('#verification-note');
     if (!session) {
-      note.innerHTML = '<i></i><span><b>걸음 신호와 위치를 함께 확인합니다</b><small>가속도 기반 걸음 추정과 정확한 위치 이동이 함께 확인될 때만 보수적으로 계산한 거리를 인정합니다. 실내에서 위치 정확도가 낮으면 거리가 늘지 않을 수 있습니다.</small></span>';
+      note.innerHTML = '<i></i><span><b>실시간 속도로 이동 거리를 계산합니다</b><small>브라우저가 제공하는 속도(m/s)를 시간에 따라 누적합니다. 좌표는 계산이나 저장에 사용하지 않습니다. 속도 정보가 제공되지 않으면 거리를 누적할 수 없습니다.</small></span>';
       $('#tracking-status').textContent = '알람이 울리면 센서 상태를 확인합니다.';
     }
   }
