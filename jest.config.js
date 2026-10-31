@@ -1,0 +1,5 @@
+module.exports = {
+  preset: 'jest-expo',
+  testMatch: ['**/src/**/*.test.ts'],
+  clearMocks: true,
+};
