@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090b0a" />
+    <meta name="description" content="목표한 거리를 걸어야 알람이 해제되는 Move to Wake" />
+    <title>Move to Wake — 걸어서 깨우는 알람</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <a class="brand" href="#setup" aria-label="Move to Wake 홈">
+          <span class="brand-mark">↗</span>
+          <span><b>MOVE TO WAKE</b><small>걸어서 깨우는 알람</small></span>
+        </a>
+        <div class="topbar-right">
+          <span class="connection"><i id="mode-dot"></i><span id="mode-label">가상 테스트 모드</span></span>
+          <label class="mode-toggle"><input id="test-mode" type="checkbox" checked /><span class="toggle-track"></span><span>테스트</span></label>
+        </div>
+      </header>
+
+      <main>
+        <nav class="tabs" aria-label="주요 메뉴">
+          <button class="tab active" data-tab="setup"><span>◷</span> 알람 설정</button>
+          <button class="tab" data-tab="alarm"><span>◉</span> 알람 진행</button>
+          <button class="tab" data-tab="community"><span>◎</span> 계정 · 그룹</button>
+        </nav>
+
+        <section class="page active" id="page-setup">
+          <div class="page-heading">
+            <div><p class="eyebrow">01 / ALARM SETUP</p><h1>일어날 시간을 정해요<span class="green">.</span></h1><p class="subheading">시간과 목표 거리를 정하고, 아침을 가볍게 시작해요.</p></div>
+            <div class="heading-chip"><span class="chip-icon">↗</span><span>MOVE TO DISMISS<small>걸어서 알람 해제</small></span></div>
+          </div>
+
+          <div class="setup-grid">
+            <article class="card time-card">
+              <div class="card-heading"><div><p class="overline">WAKE UP TIME</p><h2>알람 시각</h2></div><span class="small-chip">24시간</span></div>
+              <div class="time-control"><input id="alarm-time" type="time" value="07:00" aria-label="알람 시각" /></div>
+              <div class="subtle-rule"></div>
+              <p class="hint">원하는 시간을 선택하세요. 지금은 미리보기만 지원해요.</p>
+            </article>
+
+            <article class="card distance-card">
+              <div class="card-heading"><div><p class="overline">DISTANCE GOAL</p><h2>목표 이동 거리</h2></div><span class="small-chip">누적 거리</span></div>
+              <div class="distance-display"><strong id="target-value">10</strong><span>m</span></div>
+              <input id="target-distance" class="range" type="range" min="7" max="50" step="1" value="10" aria-label="목표 이동 거리" />
+              <div class="range-labels"><span>7 m</span><span>50 m</span></div>
+              <p class="hint">최소 7m · 1m 단위로 조절 · 왕복 경로도 누적돼요</p>
+            </article>
+
+            <article class="card explainer-card">
+              <div class="explainer-icon">i</div><div><h3>실제 이동 확인이 우선이에요</h3><p>걸음 수나 흔들림만으로 실제 이동을 단정하지 않아요. 위치를 검증할 수 없는 이동은 알람 해제 거리에 포함하지 않습니다.</p></div>
+            </article>
+            <button id="preview-alarm" class="button button-primary setup-cta">알람 화면 미리보기 <span>→</span></button>
+          </div>
+          <p class="page-footnote">이 미리보기는 알람을 예약하거나 실제로 울리지 않습니다.</p>
+        </section>
+
+        <section class="page" id="page-alarm">
+          <div class="page-heading">
+            <div><p class="eyebrow">02 / WAKE UP</p><h1 id="alarm-heading">걸어서 하루를 시작해요<span class="green">.</span></h1><p class="subheading">설정한 거리를 누적 이동하면 알람이 해제돼요.</p></div>
+            <span id="ring-status" class="ring-status"><i></i> 미리보기</span>
+          </div>
+          <div class="alarm-layout">
+            <article class="card progress-card">
+              <div class="progress-top"><div><p class="overline">DISTANCE PROGRESS</p><h2>오늘의 이동 목표</h2></div><time id="ring-time">07:00</time></div>
+              <div class="progress-numbers"><strong id="verified-value">0.0</strong><span>/ <b id="goal-value">10</b> m</span></div>
+              <div class="progress-track"><div id="progress-fill"></div><i id="progress-dot"></i></div>
+              <div class="progress-caption"><span>출발</span><span id="remaining-value">10.0m 남음</span><span>목표</span></div>
+              <div class="metrics">
+                <div><span>보행 추정</span><b id="estimated-value">0.0 m</b></div>
+                <div><span>걸음 수</span><b id="steps-value">0</b></div>
+                <div><span>누적 경로</span><b id="route-value" class="green">0.0 m</b></div>
+              </div>
+              <div id="verification-note" class="verification-note"><i></i><span><b>가상 테스트 데이터</b><small>아래 입력값은 시연용이며 실제 이동 측정값이 아닙니다.</small></span></div>
+            </article>
+            <article class="card simulator-card" id="simulator">
+              <div class="card-heading"><div><p class="overline">DEMO ONLY</p><h2>가상 이동 입력</h2></div><span class="demo-badge">TEST</span></div>
+              <p class="hint">실제 센서 데이터가 아닌 화면 시연용 값이에요.</p>
+              <div class="demo-actions">
+                <button class="demo-button" data-estimated="0.8" data-distance="0" data-steps="12"><span class="demo-icon">↕</span><span><b>제자리걸음</b><small>걸음 추정만 추가 · 검증 거리 0m</small></span><i>→</i></button>
+                <button class="demo-button" data-estimated="3" data-distance="3" data-steps="40"><span class="demo-icon">＋</span><span><b>가상 3m 이동</b><small>걸음과 경로 거리 추가</small></span><i>→</i></button>
+                <button class="demo-button" data-estimated="5" data-distance="5" data-steps="68"><span class="demo-icon">＋</span><span><b>가상 5m 이동</b><small>걸음과 경로 거리 추가</small></span><i>→</i></button>
+              </div>
+            </article>
+          </div>
+          <p class="page-footnote">실제 위치 검증과 알람 예약은 아직 연결되지 않았습니다. 센서 기반 부정 동작 감지는 완벽하지 않습니다.</p>
+        </section>
+
+        <section class="page" id="page-community">
+          <div class="page-heading"><div><p class="eyebrow">03 / COMMUNITY</p><h1>함께 일어나요<span class="green">.</span></h1><p class="subheading">계정과 그룹 기록을 한곳에서 확인해요.</p></div><span class="local-badge">LOCAL DEMO</span></div>
+          <div class="community-grid">
+            <article class="card" id="auth-card">
+              <div class="card-heading"><div><p class="overline">YOUR ACCOUNT</p><h2>로그인 또는 회원가입</h2></div></div>
+              <p class="hint">Gmail 또는 사용자 아이디로 시작하세요.</p>
+              <label class="field-label" for="account-id">이메일 또는 아이디</label><input class="text-input" id="account-id" autocomplete="username" placeholder="name@example.com" />
+              <label class="field-label" for="account-password">비밀번호</label><input class="text-input" id="account-password" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
+              <div class="auth-actions"><button id="login" class="button button-primary">로그인</button><button id="signup" class="button button-outline">회원가입</button></div>
+              <button id="google-login" class="google-button"><b>G</b> Google로 계속하기 <small>데모</small></button>
+              <p id="auth-feedback" class="fine-print" aria-live="polite"></p>
+              <p class="fine-print">화면 시연용입니다. 인증 정보는 저장하거나 전송하지 않습니다.</p>
+            </article>
+
+            <article class="card">
+              <div class="card-heading"><div><p class="overline">YOUR CREW</p><h2>그룹 만들기</h2></div><span class="small-chip">WEEKLY</span></div>
+              <label class="field-label" for="group-name">그룹 이름</label><input class="text-input" id="group-name" placeholder="예: 우리 집 기상단" />
+              <label class="field-label" for="member-id">초대할 사용자 아이디</label><div class="invite-row"><input class="text-input" id="member-id" placeholder="사용자 아이디" /><button id="create-group" class="button button-primary">그룹 생성</button></div>
+              <div id="group-result" class="group-result empty-group"><span>◎</span><b>아직 그룹이 없어요</b><small>이름을 정해 첫 그룹을 만들어 보세요.</small></div>
+              <p id="group-feedback" class="fine-print" aria-live="polite"></p>
+            </article>
+
+            <article id="weekly-card" class="card weekly-card hidden">
+              <div class="card-heading"><div><p class="overline">THIS WEEK</p><h2 id="group-title">그룹 기록</h2><p class="hint" id="group-members">멤버</p></div><span class="small-chip">주간</span></div>
+              <div class="week-chart" aria-label="요일별 알람 기록"><div><i style="--bar:64%"></i><small>월</small></div><div><i style="--bar:88%"></i><small>화</small></div><div><i style="--bar:48%"></i><small>수</small></div><div><i style="--bar:76%"></i><small>목</small></div><div><i style="--bar:35%"></i><small>금</small></div><div><i style="--bar:0%"></i><small>토</small></div><div><i style="--bar:0%"></i><small>일</small></div></div>
+              <div class="history-heading">알람 시작부터 해제까지</div><div id="member-list" class="member-list"></div>
+              <p class="fine-print">샘플 주간 기록은 화면 데모 데이터이며, 다른 사용자와 공유되지 않습니다.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+      <footer><span>MOVE TO WAKE <b>·</b> UI PROTOTYPE</span><span>실제 측정과 알람 예약 기능은 미구현</span></footer>
+    </div>
+  </body>
+</html>
