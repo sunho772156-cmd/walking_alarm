@@ -38,6 +38,12 @@
     noiseFloor: 0,
     lastSampleAt: 0,
     lastStepAt: 0,
+    candidateStartedAt: 0,
+    candidatePeak: 0,
+    candidateSamples: 0,
+    candidateDuration: 0,
+    lastCandidateAt: 0,
+    lastCandidatePeak: 0,
     lastUiAt: 0,
   };
 
@@ -118,26 +124,54 @@
         ? Math.min(0.25, Math.max(0.01, (now - motionEstimator.lastSampleAt) / 1000))
         : 0.05;
       if (motionEstimator.baselineMagnitude === null) motionEstimator.baselineMagnitude = magnitude;
-      const filterTimeConstant = event.acceleration ? 0.3 : 0.8;
+      const filterTimeConstant = event.acceleration ? 0.55 : 1.2;
       const alpha = 1 - Math.exp(-elapsed / filterTimeConstant);
       motionEstimator.baselineMagnitude += (magnitude - motionEstimator.baselineMagnitude) * alpha;
       const highPass = magnitude - motionEstimator.baselineMagnitude;
-      motionEstimator.noiseFloor = motionEstimator.noiseFloor * 0.96 + Math.abs(highPass) * 0.04;
-      const peakThreshold = Math.max(0.3, Math.min(0.75, motionEstimator.noiseFloor * 1.25));
+      motionEstimator.noiseFloor = motionEstimator.noiseFloor * 0.99 + Math.abs(highPass) * 0.01;
+      const peakThreshold = Math.max(1.15, motionEstimator.noiseFloor * 2.5);
       const isPeak = motionEstimator.highPass > motionEstimator.previousHighPass
-        && motionEstimator.highPass >= highPass
-        && motionEstimator.highPass >= peakThreshold;
+        && motionEstimator.highPass >= highPass;
 
-      if (isPeak && now - motionEstimator.lastStepAt >= 280) {
-        motionEstimator.lastStepAt = now;
-        state.sensorStats.steps += 1;
-        state.sensorStats.estimatedDistance += 0.7;
-        if (state.session?.status === 'ringing') {
-          state.session.estimatedSteps += 1;
-          state.session.estimatedWalkingDistance += 0.7;
-          distanceVerifier?.addWalkingStep();
-        }
+      if (motionEstimator.highPass > peakThreshold) {
+        if (!motionEstimator.candidateStartedAt) motionEstimator.candidateStartedAt = now;
+        motionEstimator.candidatePeak = Math.max(motionEstimator.candidatePeak, motionEstimator.highPass);
+        motionEstimator.candidateSamples += 1;
+        motionEstimator.candidateDuration = now - motionEstimator.candidateStartedAt;
       }
+
+      if (isPeak) {
+        const candidatePeak = motionEstimator.candidatePeak;
+        const candidateDuration = motionEstimator.candidateDuration;
+        const candidateSamples = motionEstimator.candidateSamples;
+        const interval = motionEstimator.lastCandidateAt ? now - motionEstimator.lastCandidateAt : 0;
+        const amplitudeRatio = motionEstimator.lastCandidatePeak
+          ? Math.min(candidatePeak, motionEstimator.lastCandidatePeak) / Math.max(candidatePeak, motionEstimator.lastCandidatePeak)
+          : 0;
+        const plausibleWalkingCycle = interval >= 450 && interval <= 1100
+          && amplitudeRatio >= 0.45 && amplitudeRatio <= 1;
+        const plausiblePulse = candidatePeak >= peakThreshold && candidateDuration >= 35
+          && candidateDuration <= 450 && candidateSamples >= 2;
+
+        if (plausiblePulse && plausibleWalkingCycle && now - motionEstimator.lastStepAt >= 450) {
+          motionEstimator.lastStepAt = now;
+          state.sensorStats.steps += 1;
+          state.sensorStats.estimatedDistance += 0.7;
+          if (state.session?.status === 'ringing') {
+            state.session.estimatedSteps += 1;
+            state.session.estimatedWalkingDistance += 0.7;
+            distanceVerifier?.addWalkingStep();
+          }
+        }
+
+        motionEstimator.lastCandidateAt = now;
+        motionEstimator.lastCandidatePeak = candidatePeak;
+        motionEstimator.candidateStartedAt = 0;
+        motionEstimator.candidatePeak = 0;
+        motionEstimator.candidateSamples = 0;
+        motionEstimator.candidateDuration = 0;
+      }
+
       motionEstimator.previousHighPass = motionEstimator.highPass;
       motionEstimator.highPass = highPass;
       motionEstimator.lastSampleAt = now;
@@ -216,6 +250,12 @@
       motionEstimator.noiseFloor = 0;
       motionEstimator.lastSampleAt = 0;
       motionEstimator.lastStepAt = 0;
+      motionEstimator.candidateStartedAt = 0;
+      motionEstimator.candidatePeak = 0;
+      motionEstimator.candidateSamples = 0;
+      motionEstimator.candidateDuration = 0;
+      motionEstimator.lastCandidateAt = 0;
+      motionEstimator.lastCandidatePeak = 0;
       state.sensorStats.accelerationReceived = false;
       state.sensorStats.rotationReceived = false;
       state.sensorStats.orientationReceived = false;
