@@ -58,8 +58,6 @@
     $('#sensor-acceleration').textContent = state.sensorStats.acceleration;
     $('#sensor-rotation').textContent = state.sensorStats.rotation;
     $('#sensor-orientation').textContent = state.sensorStats.orientation;
-    $('#sensor-steps').textContent = String(state.sensorStats.steps);
-    $('#sensor-distance').textContent = `${formatDistance(state.sensorStats.estimatedDistance)} m`;
     $('#sensor-verified').textContent = `${formatDistance(state.session?.verifiedDistance ?? 0)} m`;
   }
 
@@ -574,8 +572,6 @@
   function renderAlarm() {
     const session = state.session;
     const verified = session?.verifiedDistance ?? 0;
-    const estimated = session?.estimatedWalkingDistance ?? 0;
-    const steps = session?.estimatedSteps ?? 0;
     const goal = session?.targetDistance ?? Number(targetInput.value);
     const progress = Math.min(verified / goal, 1);
     const remaining = Math.max(0, goal - verified);
@@ -584,8 +580,6 @@
     $('#verified-value').textContent = formatDistance(verified);
     $('#goal-value').textContent = goal;
     $('#remaining-value').textContent = `${formatDistance(remaining)}m 남음`;
-    $('#estimated-value').textContent = `${formatDistance(estimated)} m`;
-    $('#steps-value').textContent = String(steps);
     $('#route-value').textContent = `${formatDistance(verified)} m`;
     $('#progress-fill').style.width = `${progress * 100}%`;
     $('#progress-dot').style.left = `${progress * 100}%`;
