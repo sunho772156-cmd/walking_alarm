@@ -223,9 +223,10 @@
       $('#sensor-retry').classList.remove('hidden');
       return;
     }
+    const permissionRequest = requestSensorPermissionsFromGesture();
     startButton.disabled = true;
     $('#sensor-status').textContent = '기기의 센서 지원과 권한을 확인하는 중…';
-    requestSensorPermissionsFromGesture().then((permission) => {
+    permissionRequest.then((permission) => {
       const motionOkay = permission.motionSupported && permission.motion;
       const orientationOkay = permission.orientationSupported && permission.orientation;
       $('#motion-support').textContent = `가속도: ${!permission.motionSupported ? '미지원' : motionOkay ? '허용됨' : '권한 거부'}`;
